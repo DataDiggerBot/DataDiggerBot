@@ -4,7 +4,8 @@
   "description": "Free & Open Source Telegram Bot By @RasiTechChannel1",
   "main": "index.js",
   "scripts": {
-    "test": "node index.js"
+    "test": "node index.js",
+    "dev": "nodemon index.js"
   },
   "keywords": [
     "tools"
@@ -20,11 +21,13 @@
     "gm": "^1.25.0",
     "moment": "^2.29.4",
     "node-fetch": "^3.3.2",
-    "node-telegram-bot-api": "^0.61.0",
     "os": "^0.1.2",
     "path": "^0.12.7",
     "ping": "^0.4.4",
     "sharp": "^0.32.3",
-    "whois-json": "^2.0.4"
+    "whois-json": "^2.0.4",
+    "node-telegram-bot-api": "^0.61.0",
+    "input": "^1.0.1",
+    "telegram": "^2.19.6"
   }
 }

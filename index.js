@@ -1,3 +1,7 @@
+const input = require('input')
+const userbot = require('./src/userbot')
+const processUpdate = require('./src/userbot/handlers')
+
 const TelegramBot = require("node-telegram-bot-api");
 const moment = require("moment");
 const os = require("os");
@@ -5,7 +9,7 @@ const fs = require("fs");
 const { exec, spawn } = require("child_process");
 const axios = require("axios");
 const sharp = require("sharp");
-// const fetch = require('node-fetch');
+//const fetch = require('node-fetch');
 const ping = require("ping");
 const net = require("net");
 const dgram = require("dgram");
@@ -18,6 +22,32 @@ const ffmpeg = require("fluent-ffmpeg");
 const settings = JSON.parse(
   fs.readFileSync(path.join(__dirname, "settings/config.json"), "utf8")
 );
+
+// initialize userbot
+;(async () => {
+  const { api_id: API_ID, api_hash: API_HASH } = settings
+  if ( !API_ID || !API_HASH ) {
+    throw new Error('Missing userbot configs!!')
+  }
+
+  await userbot.connect()
+  const isAuthorized = await userbot.isUserAuthorized()
+
+  if ( !isAuthorized ) {
+    await userbot.start({
+      phoneNumber: async () => await input.text("Enter your number: "),
+      password: async () => await input.text("Enter your password: "),
+      phoneCode: async () => await input.text("Enter the code you received: "),
+      onError: (err) => console.log(err.message)
+    });
+
+    console.log(userbot.session.save())
+    process.exit(1)
+  }
+
+  await userbot.getDialogs()
+  console.log('Userbot Connected!')
+})();
 
 // console.log(settings.ownerId)
 
@@ -178,7 +208,75 @@ bot.on("message", async (msg) => {
 
   console.log(msg);
   // Memisahkan teks menjadi array
-  switch (command) {
+
+  let replyOpt = {
+    reply_to_message_id: messageId
+  }
+ 
+  switch ( command ) {
+    case "/sangmata":
+      if ( isNaN(query) ) {
+        let txt = 'User ID tidak valid!!'
+        return await bot.sendMessage(chatId, txt, replyOpt)
+      }
+
+      let loadSangmata = await bot.sendMessage(chatId, 'Loading...', replyOpt)
+      let {
+        chat: { id: chtIdSangmata },
+        message_id: msgIdSangmata
+      } = loadSangmata
+
+      processUpdate({
+        type: 'new',
+        text: query,
+        targetBot: '@SangMata_beta_bot',
+        timeout: 5000,
+        onTimeout: async () => {
+          console.log('Sangmata Timeout')
+        },
+        onSuccess: async res => {
+          //console.log(res)
+          console.log('Sangmata Sukses')
+
+          let respondText = res.message
+          let editOptions = { chat_id: chtIdSangmata, message_id: msgIdSangmata }
+          await bot.editMessageText(respondText, editOptions)
+        }
+      })
+      break;
+    case "/email":
+      let regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      let validEmail = query.match(regex)
+
+      if ( !validEmail ) {
+        let txt = 'Email tidak valid!!'
+        return await bot.sendMessage(chatId, txt)
+      }
+
+      let loadEmail = await bot.sendMessage(chatId, 'Loading...', replyOpt)
+      let {
+        chat: { id: chtIdEmail },
+        message_id: msgIdEmail
+      } = loadEmail
+
+      processUpdate({
+        type: 'edit',
+        text: query,
+        targetBot: '@PeriksaDataBot',
+        timeout: 5000,
+        onTimeout: async () => {
+          console.log('Email Timeout')
+        },
+        onSuccess: async res => {
+          //console.log(res)
+          console.log('Email Sukses')
+
+          let respondText = res.message
+          let editOptions = { chat_id: chtIdEmail, message_id: msgIdEmail }
+          await bot.editMessageText(respondText, editOptions)
+        }
+      })
+      break;
     case "/ytmp4":
   // Download video dari API
   const downloadResponse = await downloadYouTubeVideo(query);
